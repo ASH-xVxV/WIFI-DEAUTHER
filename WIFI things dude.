@@ -1,0 +1,116 @@
+#include <ESP8266WiFi.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "WiFiScan.h"
+
+// OLED Configuration
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Button Pins
+#define BTN_SELECT D3
+#define BTN_UP D4
+#define BTN_DOWN D5
+
+// Variables
+int currentMenu = 0; // 0 = WiFi Jammer, 1 = Fake AP
+String statusMessage = "Ready";
+
+// Function Prototypes
+void setupWiFiJammer();
+void setupFakeAP();
+void displayMenu();
+void updateStatus(String message);
+
+void setup() {
+  // Initialize Serial
+  Serial.begin(115200);
+
+  // Initialize OLED
+  if (!display.begin(SSD1306_I2C_ADDRESS, 0x3C)) {
+    Serial.println("SSD1306 allocation failed");
+    for (;;);
+  }
+  display.clearDisplay();
+  display.display();
+
+  // Initialize Buttons
+  pinMode(BTN_SELECT, INPUT_PULLUP);
+  pinMode(BTN_UP, INPUT_PULLUP);
+  pinMode(BTN_DOWN, INPUT_PULLUP);
+
+  // Initial Display
+  updateStatus("Initializing...");
+  delay(1000);
+  displayMenu();
+}
+
+void loop() {
+  // Menu Navigation
+  if (digitalRead(BTN_UP) == LOW) {
+    currentMenu = (currentMenu == 0) ? 1 : 0;
+    displayMenu();
+    delay(300);
+  }
+
+  if (digitalRead(BTN_DOWN) == LOW) {
+    currentMenu = (currentMenu == 1) ? 0 : 1;
+    displayMenu();
+    delay(300);
+  }
+
+  // Select Button
+  if (digitalRead(BTN_SELECT) == LOW) {
+    if (currentMenu == 0) {
+      setupWiFiJammer();
+    } else if (currentMenu == 1) {
+      setupFakeAP();
+    }
+    delay(300);
+  }
+}
+
+void displayMenu() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("WiFi Deauther Menu:");
+  display.println("--------------------");
+  if (currentMenu == 0) {
+    display.println("> WiFi Jammer");
+    display.println("  Fake WiFi AP");
+  } else {
+    display.println("  WiFi Jammer");
+    display.println("> Fake WiFi AP");
+  }
+  display.display();
+}
+
+void updateStatus(String message) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Status:");
+  display.println("--------------------");
+  display.println(message);
+  display.display();
+  statusMessage = message;
+}
+
+void setupWiFiJammer() {
+  updateStatus("Jamming WiFi...");
+  // Add WiFi jamming code using WiFiScan library
+  WiFiScan scan;
+  scan.startScan();
+}
+
+void setupFakeAP() {
+  updateStatus("Creating Fake AP...");
+  // Add Fake AP creation code
+  WiFi.softAP("FakeNetwork", "12345678");
+  updateStatus("Fake AP Active");
+}
